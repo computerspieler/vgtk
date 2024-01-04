@@ -41,12 +41,12 @@ struct ef9345 {
 	uint8_t m_latchi;                         //insert attribute latch
 	uint8_t m_latchu;                         //underline attribute latch
 
-	uint32_t raster[312][492];		  //336 for 40 col
+	uint32_t raster[336][492];		  //336 for 40 col, 312 for 80 col
 	uint32_t *m_palette;
 
 	unsigned m_variant;
 	unsigned trace;
-	unsigned busy_ticks;
+	unsigned busy_ticks;	// In us
 	unsigned long flash;
 };
 
@@ -61,7 +61,7 @@ void ef9345_set_colourmap(struct ef9345 *ef, uint32_t *cmap);
 uint32_t *ef9345_get_raster(struct ef9345 *ef);
 void ef9345_rasterize(struct ef9345 *ef);
 
-void ef9345_cycles(struct ef9345 *ef, unsigned long usec);
+void ef9345_cycles(struct ef9345 *ef, unsigned long nsec);
 
 #endif	// _EF9345_H
 

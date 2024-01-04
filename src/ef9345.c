@@ -168,12 +168,12 @@ void ef9345_reset(struct ef9345 *ef)
 // set busy flag and timer to clear it
 static void set_busy_flag(struct ef9345 *ef, int period)
 {
-//FIXME	ef->m_bf = 1;
+//FIXME ef->m_bf = 1;
 	ef->busy_ticks = period;	/* in ns */
 }
 
 // draw a char in 40 char line mode
-static void draw_char_40(struct ef9345 *ef, uint8_t *c, uint16_t x, uint16_t y)
+static void draw_char_40(struct ef9345 *ef, uint8_t *charset, uint16_t x, uint16_t y)
 {
 	const uint32_t *palette = ef->m_palette;
 	const int scan_xsize = 8;
@@ -181,11 +181,12 @@ static void draw_char_40(struct ef9345 *ef, uint8_t *c, uint16_t x, uint16_t y)
 
 	for(int i = 0; i < scan_ysize; i++)
 		for(int j = 0; j < scan_xsize; j++)
-			ef->raster[(y * 10 + i)][(x * 8 + j)] = palette[c[8 * i + j] & 0x07];
+			ef->raster[(y * scan_ysize + i)][(x * scan_xsize + j)] =
+				palette[charset[scan_xsize * i + j] & 0x07];
 }
 
 // draw a char in 80 char line mode
-static void draw_char_80(struct ef9345 *ef, uint8_t *c, uint16_t x, uint16_t y)
+static void draw_char_80(struct ef9345 *ef, uint8_t *charset, uint16_t x, uint16_t y)
 {
 	const uint32_t *palette = ef->m_palette;
 	const int scan_xsize = 6;
@@ -193,7 +194,8 @@ static void draw_char_80(struct ef9345 *ef, uint8_t *c, uint16_t x, uint16_t y)
 
 	for(int i = 0; i < scan_ysize; i++)
 		for(int j = 0; j < scan_xsize; j++)
-			ef->raster[(y * 10 + i)][(x * 6 + j)] = palette[c[6 * i + j] & 0x07];
+			ef->raster[(y * scan_ysize + i)][(x * scan_xsize + j)] =
+				palette[charset[scan_xsize * i + j] & 0x07];
 }
 
 
@@ -1071,18 +1073,20 @@ uint32_t *ef9345_get_raster(struct ef9345 *ef)
 }
 
 /* We will wire the renderer up to this eventually */
-void ef9345_cycles(struct ef9345 *ef, unsigned long usec)
+void ef9345_cycles(struct ef9345 *ef, unsigned long nsec)
 {
-	if (ef->busy_ticks > usec)
-		ef->busy_ticks -= usec;
+	const unsigned long blink_delay = 5e8;
+	
+	if (ef->busy_ticks > nsec)
+		ef->busy_ticks -= nsec;
 	else {
 		ef->busy_ticks = 0;
 		ef->m_bf = 0;
 	}
-	ef->flash += usec;
-	if (ef->flash > 500000) {
+	ef->flash += nsec;
+	if (ef->flash > blink_delay) {
 		ef->m_blink = !ef->m_blink;
-		ef->flash -= 500000;
+		ef->flash -= blink_delay;
 	}
 }
 

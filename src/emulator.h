@@ -5,6 +5,7 @@
 #include <glib.h>
 
 void emulator_init(int argc, char* argv[]);
+void emulator_destroy();
 gpointer emulator_run(gpointer data);
 void emulator_refresh_screen(struct ef9345 *ef_ctx);
 

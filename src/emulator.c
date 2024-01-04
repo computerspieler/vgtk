@@ -26,6 +26,12 @@ uint32_t palette[8] = {
     0xFFFFFF  // White
 };
 
+void emulator_destroy()
+{
+	if(ef_ctx)
+		ef9345_free(ef_ctx);
+}
+
 byte cpu_memory_read(size_t param, ushort address)
 {
     return memory[address];
@@ -139,8 +145,11 @@ unsigned long get_seconds()
 
 gpointer emulator_run(gpointer data)
 {
+#ifdef DEBUG
     char buffer[1024];
+#endif
 	(void) data;
+	
 
     unsigned long last_refresh_time, last_update_time, update_time;
 
@@ -154,7 +163,7 @@ gpointer emulator_run(gpointer data)
             Z80ExecuteTStates(&z80_ctx, 1);
             if(prev_pc == z80_ctx.PC)
                 continue;
-#if 1
+#ifdef DEBUG
             Z80Debug(&z80_ctx, NULL, buffer);
             printf("PC=%4x;AF=%4x;HL=%4x;BC=%4x;DE=%4x;Inst:%s\n",
                 z80_ctx.PC,
@@ -168,9 +177,7 @@ gpointer emulator_run(gpointer data)
         }
 
         Z80INT(&z80_ctx, 0x38);
-        ef9345_cycles(ef_ctx, update_time - last_update_time);
-
-        last_update_time = update_time;
+        ef9345_cycles(ef_ctx, (update_time - last_update_time) * 1000L);
 
         // TODO: Un-hardcode this value
         // 16667 us = 1/(60 fps)
@@ -178,6 +185,8 @@ gpointer emulator_run(gpointer data)
             emulator_refresh_screen(ef_ctx);
             last_refresh_time = update_time;
         }
+
+        last_update_time = update_time;
     }
 
     return NULL;

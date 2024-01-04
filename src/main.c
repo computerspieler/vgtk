@@ -65,6 +65,7 @@ void on_screen_draw(GtkWidget *widget, cairo_t *cr, gpointer user_data)
 
 void on_main_window_exit()
 {
+	//emulator_destroy();
     gtk_main_quit();
 }
 
@@ -83,7 +84,7 @@ void emulator_refresh_screen(struct ef9345 *ef_ctx)
 
     for(y = 0; y < 312; y ++)
         for(x = 0; x < 492; x ++)
-            screen_data[x + stride * y / 4] = ef_ctx->raster[0][0];
+            screen_data[x + stride * y / 4] = ef_ctx->raster[y][x];
 
     cairo_surface_mark_dirty(screen);
     gtk_widget_queue_draw_area(screen_area, 0, 0, 492, 312);
