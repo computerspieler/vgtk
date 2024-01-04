@@ -28,6 +28,23 @@
 #define MODE12x80   3
 #define MODE16x40   4
 
+#define DIAL_NONE	0
+#define DIAL_TOP	(1 << 0)
+#define DIAL_BOTTOM	(1 << 1)
+#define DIAL_LEFT	(1 << 2)
+#define DIAL_RIGHT	(1 << 3)
+
+#define MAT_DOUBLE_HEIGHT		(1 << 7)
+#define MAT_CURSOR_CONFIG_MASK	(7 << 4)
+#define MAT_SHOW_CURSOR			(1 << 6)
+#define MAT_CURSOR_FLASH		(1 << 5)
+#define MAT_CURSOR_UNDERLINED	(1 << 4)
+#define MAT_MARGIN_INSERT		(1 << 3)
+#define MAT_MARGIN_BLUE			(1 << 2)
+#define MAT_MARGIN_GREEEN		(1 << 1)
+#define MAT_MARGIN_RED			(1 << 0)
+#define MAT_MARGIN_COLOR_MASK	(7 << 0)
+
 static void set_video_mode(struct ef9345 *ef);
 
 //**************************************************************************
@@ -215,7 +232,7 @@ static void set_video_mode(struct ef9345 *ef)
 	/* TODO render size switch */
 
 	//border color
-	memset(ef->m_border, ef->m_mat & 0x07, sizeof(ef->m_border));
+	memset(ef->m_border, ef->m_mat & MAT_MARGIN_COLOR_MASK, sizeof(ef->m_border));
 
 	//set the base for the m_videoram charset
 	ef->m_ram_base[0] = ((ef->m_dor & 0x07) << 11);
@@ -242,91 +259,96 @@ static uint8_t read_char(struct ef9345 *ef, uint8_t index, uint16_t addr)
 }
 
 // calculate the dial position of the char
-static uint8_t get_dial(struct ef9345 *ef, uint8_t x, uint8_t attrib)
+static void update_dial(struct ef9345 *ef, uint8_t x, uint8_t double_width, uint8_t double_height)
 {
-	if (x > 0 && ef->m_last_dial[x-1] == 1)         //top right
-		ef->m_last_dial[x] = 2;
-	else if (x > 0 && ef->m_last_dial[x-1] == 5)    //half right
-		ef->m_last_dial[x] = 10;
-	else if (ef->m_last_dial[x] == 1)               //bottom left
-		ef->m_last_dial[x] = 4;
-	else if (ef->m_last_dial[x] == 2)               //bottom right
-		ef->m_last_dial[x] = 8;
-	else if (ef->m_last_dial[x] == 3)               //lower half
-		ef->m_last_dial[x] = 12;
-	else if (attrib == 1)                       //Left half
-		ef->m_last_dial[x] = 5;
-	else if (attrib == 2)                       //half high
-		ef->m_last_dial[x] = 3;
-	else if (attrib == 3)                       //top left
-		ef->m_last_dial[x] = 1;
-	else                                        //none
-		ef->m_last_dial[x] = 0;
+	uint8_t previous_dial;
 
-	return ef->m_last_dial[x];
+	previous_dial = ef->m_last_dial[x];
+	ef->m_last_dial[x] = DIAL_NONE;
+	
+	if(previous_dial & DIAL_TOP) {
+		ef->m_last_dial[x] |= DIAL_BOTTOM;
+		ef->m_last_dial[x] |= previous_dial & DIAL_LEFT;
+		ef->m_last_dial[x] |= previous_dial & DIAL_RIGHT;
+	} else {
+		if(x > 0) {
+			if(ef->m_last_dial[x-1] & DIAL_LEFT) {
+				ef->m_last_dial[x] |= DIAL_RIGHT;
+				ef->m_last_dial[x] |= ef->m_last_dial[x-1] & DIAL_TOP;
+			}
+		}
+
+		if(ef->m_last_dial[x] == DIAL_NONE) {
+			if (double_width)
+				ef->m_last_dial[x] |= DIAL_LEFT;
+
+			if (double_height)
+				ef->m_last_dial[x] |= DIAL_TOP;
+		}
+	}
 }
 
 // zoom the char
-static void zoom(struct ef9345 *ef, uint8_t *pix, uint16_t n)
+static void zoom(struct ef9345 *ef, uint8_t *pix, uint16_t flag)
 {
 	uint8_t i, j;
-	if ((n & 0x0a) == 0)
-		for(i = 0; i < 80; i += 8) // 1, 4, 5
-			for(j = 7; j > 0; j--)
-				pix[i + j] = pix[i + j / 2];
-
-	if ((n & 0x05) == 0)
-		for(i = 0; i < 80; i += 8) // 2, 8, 10
-			for(j =0 ; j < 7; j++)
-				pix[i + j] = pix[i + 4 + j / 2];
-
-	if ((n & 0x0c) == 0)
-		for(i = 0; i < 8; i++) // 1, 2, 3
+	
+	if (flag & DIAL_TOP) {
+		for(i = 0; i < 8; i++)
 			for(j = 9; j > 0; j--)
 				pix[i + 8 * j] = pix[i + 8 * (j / 2)];
-
-	if ((n & 0x03) == 0)
-		for(i = 0; i < 8; i++) // 4, 8, 12
-			for(j = 0; j < 9; j++)
-				pix[i + 8 * j] = pix[i + 40 + 8 * (j / 2)];
+	}
+	else if (flag & DIAL_BOTTOM) {
+		for(i = 0; i < 8; i++)
+			for(j = 0; j < 10; j++)
+				pix[i + 8 * j] = pix[i + 8 * (j / 2 + 5)];
+	}
+	
+	if (flag & DIAL_LEFT) {
+		for(i = 0; i < 80; i += 8)
+			for(j = 7; j > 0; j--)
+				pix[i + j] = pix[i + j / 2];
+	}
+	else if (flag & DIAL_RIGHT) {
+		for(i = 0; i < 80; i += 8)
+			for(j = 0 ; j < 7; j++)
+				pix[i + j] = pix[i + 4 + j / 2];
+	}
 }
 
 
 // calculate the address of the char x,y
 static uint16_t indexblock(struct ef9345 *ef, uint16_t x, uint16_t y)
 {
-	uint16_t i = x, j;
+	uint16_t i, j;
+	i = x;
 	j = (y == 0) ? ((ef->m_tgs & 0x20) >> 5) : ((ef->m_ror & 0x1f) + y - 1);
 	j = (j > 31) ? (j - 24) : j;
 
-	//right side of a double width character
 	if ((ef->m_tgs & 0x80) == 0 && x > 0)
-	{
-		if (ef->m_last_dial[x - 1] == 1) i--;
-		if (ef->m_last_dial[x - 1] == 4) i--;
-		if (ef->m_last_dial[x - 1] == 5) i--;
-	}
+		if (ef->m_last_dial[x - 1] & DIAL_LEFT)
+			i--;
 
 	return 0x40 * j + i;
 }
 
 // draw bichrome character (40 columns)
-static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address, uint8_t dial, uint16_t iblock, uint16_t x, uint16_t y, uint8_t c0, uint8_t c1, uint8_t insert, uint8_t flash, uint8_t conceal, uint8_t negative, uint8_t underline)
+static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address,
+	uint8_t dial, uint16_t iblock, uint16_t x, uint16_t y,
+	uint8_t c0, uint8_t c1, uint8_t insert, uint8_t flash,
+	uint8_t conceal, uint8_t negative, uint8_t underline)
 {
 	uint16_t i;
 	uint8_t pix[80];
 
 	if (ef->m_variant == TS9347)
-	{
 		c0 = 0;
-	}
-
+	
 	if (flash && ef->m_pat & 0x40 && ef->m_blink)
 		c1 = c0;                    //flash
 	if (conceal && (ef->m_pat & 0x08))
 		c1 = c0;                    //conceal
-	if (negative)                   //negative
-	{
+	if (negative) {                 //negative
 		i = c1;
 		c1 = c0;
 		c0 = i;
@@ -346,34 +368,20 @@ static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address, uint8_
 	if (i < 8)
 		i &= 1;
 
-	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f))   //cursor position
-	{
-		switch(ef->m_mat & 0x70)
-		{
-		case 0x40:                  //00 = fixed complemented
-			c0 = (23 - c0) & 15;
-			c1 = (23 - c1) & 15;
-			break;
-		case 0x50:                  //01 = fixed underlined
-			underline = 1;
-			break;
-		case 0x60:                  //10 = flash complemented
-			if (ef->m_blink)
-			{
+	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f)) {  //cursor position
+		if(ef->m_mat & MAT_SHOW_CURSOR) {
+			if(ef->m_blink || !(ef->m_mat & MAT_CURSOR_FLASH)) {
 				c0 = (23 - c0) & 15;
 				c1 = (23 - c1) & 15;
+
+				if(ef->m_mat & MAT_CURSOR_UNDERLINED)
+					underline = 1;
 			}
-			break;
-		case 0x70:                  //11 = flash underlined
-			if (ef->m_blink)
-				underline = 1;
-			break;
 		}
 	}
 
 	// generate the pixel table
-	for(i = 0; i < 40; i+=4)
-	{
+	for(i = 0; i < 40; i+=4) {
 		uint8_t ch = read_char(ef, type, address + i);
 
 		for (uint8_t b=0; b<8; b++)
@@ -384,13 +392,11 @@ static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address, uint8_
 	if (underline)
 		memset(&pix[72], c1, 8);
 
-	if (dial > 0)
-		zoom(ef, pix, dial);
+	zoom(ef, pix, dial);
 
-	//doubles the height of the char
-	if (ef->m_mat & 0x80)
-		zoom(ef, pix, (y & 0x01) ? 0x0c : 0x03);
-
+	if(ef->m_mat & MAT_DOUBLE_HEIGHT)
+		zoom(ef, pix, (y & 1) ? DIAL_BOTTOM : DIAL_TOP);
+	
 	draw_char_40(ef, pix, x + 1 , y + 1);
 }
 
@@ -414,8 +420,8 @@ static void quadrichrome40(struct ef9345 *ef, uint8_t c, uint8_t b, uint8_t a, u
 		return;
 	}
 
-	//quadrichrome don't suppor double size
-	ef->m_last_dial[x] = 0;
+	//quadrichrome don't support double size
+	ef->m_last_dial[x] = DIAL_NONE;
 
 	//initialize the color table
 	for(j = 1, n = 0, i = 0; i < 8; i++)
@@ -459,8 +465,8 @@ static void bichrome80(struct ef9345 *ef, uint8_t c, uint8_t a, uint16_t x, uint
 	uint8_t c0, c1, pix[60];
 	uint16_t i, j, d;
 
-	c1 = (a & 1) ? (ef->m_dor >> 4) & 7 : ef->m_dor & 7;    //foreground color = DOR
-	c0 =  ef->m_mat & 7;                                //background color = MAT
+	c1 = (a & 1) ? (ef->m_dor >> 4) & 7 : ef->m_dor & 7;	//foreground color = DOR
+	c0 =  ef->m_mat & MAT_MARGIN_COLOR_MASK;			//background color = MAT
 
 	switch(c & 0x80)
 	{
@@ -532,32 +538,34 @@ static void bichrome80(struct ef9345 *ef, uint8_t c, uint8_t a, uint16_t x, uint
 }
 
 // generate 16 bits 40 columns char
-static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y)
+static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
-	uint8_t a, b, c0, c1, i, f, m, n, u, type, dial;
+	uint8_t a, b, c0, c1, i, f, m, n, u, type;
 	uint16_t address, iblock;
 
-	iblock = (ef->m_mat & 0x80 && y > 1) ? indexblock(ef, x, y / 2) : indexblock(ef, x, y);
+	iblock = (ef->m_mat & MAT_DOUBLE_HEIGHT && y > 1) ? indexblock(ef, x, y / 2) : indexblock(ef, x, y);
 	a = vram_readb(ef, ef->m_block + iblock);
 	b = vram_readb(ef, ef->m_block + iblock + 0x0800);
 
-	dial = get_dial(ef, x, (a & 0x80) ? 0 : (((a & 0x20) >> 5) | ((a & 0x10) >> 3)));
+	if(scanline == 0)
+		update_dial(ef, x,
+			(!(a & 0x80)) && (a & 0x20),
+			(!(a & 0x80)) && (a & 0x10)
+		);
 
 	//type and address of the char
 	type = ((b & 0x80) >> 4) | ((a & 0x80) >> 6);
-	address = ((b & 0x7f) >> 2) * 0x40 + (b & 0x03);
+	address = ((b & 0x7c) << 4) | (b & 0x03);
 
 	//reset attributes latch
 	if (x == 0)
-	{
 		ef->m_latchm = ef->m_latchi = ef->m_latchu = ef->m_latchc0 = 0;
-	}
 
 	//delimiter
 	if ((b & 0xe0) == 0x80)
 	{
 		type = 0;
-		address = ((127) >> 2) * 0x40 + (127 & 0x03); // Force character 127 (negative space) of first type.
+		address = (((127) & 0x7c) << 4) | ((127) & 0x03); // Force character 127 (negative space) of first type.
 
 		ef->m_latchm = b & 1;
 		ef->m_latchi = (b & 2) >> 1;
@@ -565,9 +573,7 @@ static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y)
 	}
 
 	if (a & 0x80)
-	{
 		ef->m_latchc0 = (a & 0x70) >> 4;
-	}
 
 	//char attributes
 	c0 = ef->m_latchc0;                         //background
@@ -578,30 +584,30 @@ static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y)
 	n  = (a & 0x80) ? 0: ((a & 0x40) >> 6); //negative
 	u = ef->m_latchu;                           //underline
 
-	bichrome40(ef, type, address, dial, iblock, x, y, c0, c1, i, f, m, n, u);
+	bichrome40(ef, type, address, ef->m_last_dial[x], iblock, x, y, c0, c1, i, f, m, n, u);
 }
 
 // generate 24 bits 40 columns char
-static void makechar_24x40(struct ef9345 *ef, uint16_t x, uint16_t y)
+static void makechar_24x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
-	uint8_t a, b, c, c0, c1, i, f, m, n, u, type, dial;
+	uint8_t a, b, c, c0, c1, i, f, m, n, u, type;
 	uint16_t address, iblock;
 
-	iblock = (ef->m_mat & 0x80 && y > 1) ? indexblock(ef, x, y / 2) : indexblock(ef, x, y);
+	iblock = (ef->m_mat & MAT_DOUBLE_HEIGHT && y > 1) ? indexblock(ef, x, y / 2) : indexblock(ef, x, y);
 	c = vram_readb(ef, ef->m_block + iblock);
 	b = vram_readb(ef, ef->m_block + iblock + 0x0800);
 	a = vram_readb(ef, ef->m_block + iblock + 0x1000);
 
-	if ((b & 0xc0) == 0xc0)
-	{
+	if ((b & 0xc0) == 0xc0) {
 		quadrichrome40(ef, c, b, a, x, y);
 		return;
 	}
 
-	dial = get_dial(ef, x, (b & 0x02) + ((b & 0x08) >> 3));
-
+	if(scanline == 0)
+		update_dial(ef, x, b & 0x08, b & 0x02);
+	
 	//type and address of the char
-	address = ((c & 0x7f) >> 2) * 0x40 + (c & 0x03);
+	address = ((c & 0x7c) << 4) | (c & 0x03);
 	type = (b & 0xf0) >> 4;
 
 	//char attributes
@@ -613,11 +619,11 @@ static void makechar_24x40(struct ef9345 *ef, uint16_t x, uint16_t y)
 	n = ((a & 0x80) >> 7);          //negative
 	u = (((b & 0x60) == 0) || ((b & 0xc0) == 0x40)) ? ((b & 0x10) >> 4) : 0; //underline
 
-	bichrome40(ef, type, address, dial, iblock, x, y, c0, c1, i, f, m, n, u);
+	bichrome40(ef, type, address, ef->m_last_dial[x], iblock, x, y, c0, c1, i, f, m, n, u);
 }
 
 // generate 12 bits 80 columns char
-static void makechar_12x80(struct ef9345 *ef, uint16_t x, uint16_t y)
+static void makechar_12x80(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
 	uint16_t iblock = indexblock(ef, x, y);
 	//draw the cursor
@@ -629,7 +635,7 @@ static void makechar_12x80(struct ef9345 *ef, uint16_t x, uint16_t y)
 		i &= 1;
 
 	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f))   //cursor position
-		cursor = ef->m_mat & 0x70;
+		cursor = ef->m_mat & MAT_CURSOR_CONFIG_MASK;
 
 	bichrome80(ef,
         vram_readb(ef, ef->m_block + iblock),
@@ -657,17 +663,17 @@ static void draw_border(struct ef9345 *ef, uint16_t line)
 			draw_char_40(ef, ef->m_border, i, line);
 }
 
-static void makechar(struct ef9345 *ef, uint16_t x, uint16_t y)
+static void makechar(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
 	switch (ef->m_char_mode)
 	{
 		case MODE24x40:
-			makechar_24x40(ef, x, y);
+			makechar_24x40(ef, x, y, scanline);
 			break;
 		case MODEVAR40:
-			if (ef->m_variant == TS9347)
-			{ // TS9347 char mode definition is different.
-				makechar_16x40(ef, x, y);
+			// TS9347 char mode definition is different.
+			if (ef->m_variant == TS9347) {
+				makechar_16x40(ef, x, y, scanline);
 				break;
 			}
 			// fallthrough
@@ -675,13 +681,13 @@ static void makechar(struct ef9345 *ef, uint16_t x, uint16_t y)
 			fprintf(stderr, "Unemulated EF9345 mode: %02x\n", ef->m_char_mode);
 			break;
 		case MODE12x80:
-			makechar_12x80(ef, x, y);
+			makechar_12x80(ef, x, y, scanline);
 			break;
 		case MODE16x40:
 			if (ef->m_variant == TS9347)
 				fprintf(stderr, "Unemulated EF9345 mode: %02x\n", ef->m_char_mode);
 			else
-				makechar_16x40(ef, x, y);
+				makechar_16x40(ef, x, y, scanline);
 			break;
 		default:
 			fprintf(stderr, "Unknown EF9345 mode: %02x\n", ef->m_char_mode);
@@ -855,7 +861,6 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 		case 0x8b:  //IND: PAT->R1
 		case 0x8c:  //IND: DOR->R1
 		case 0x8f:  //IND: ROR->R1
-
 			set_busy_flag(ef, 3500);
 			switch(cmd&7)
 			{
@@ -966,7 +971,7 @@ void ef9345_update_scanline(struct ef9345 *ef, uint16_t scanline)
 		draw_border(ef, 0);
 		if (ef->m_pat & 1)
 			for(i = 0; i < 40; i++)
-				makechar(ef, i, (scanline / 10));
+				makechar(ef, i, 0, scanline % 10);
 		else
 			for(i = 0; i < 42; i++)
 				draw_char_40(ef, ef->m_border, i, 1);
@@ -975,7 +980,7 @@ void ef9345_update_scanline(struct ef9345 *ef, uint16_t scanline)
 	{
 		if (ef->m_pat & 2)
 			for(i = 0; i < 40; i++)
-				makechar(ef, i, (scanline / 10));
+				makechar(ef, i, (scanline / 10), scanline % 10);
 		else
 			draw_border(ef, scanline / 10);
 	}
@@ -984,13 +989,13 @@ void ef9345_update_scanline(struct ef9345 *ef, uint16_t scanline)
 		if (ef->m_variant == TS9347)
 		{
 			for(i = 0; i < 40; i++)
-				makechar(ef, i, (scanline / 10));
+				makechar(ef, i, (scanline / 10), scanline % 10);
 		}
 		else
 		{
 			if (ef->m_pat & 4) // Lower bulk enable
 				for(i = 0; i < 40; i++)
-					makechar(ef, i, (scanline / 10));
+					makechar(ef, i, (scanline / 10), scanline % 10);
 			else
 				draw_border(ef, scanline / 10);
 

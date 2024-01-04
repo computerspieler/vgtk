@@ -41,12 +41,12 @@ struct ef9345 {
 	uint8_t m_latchi;                         //insert attribute latch
 	uint8_t m_latchu;                         //underline attribute latch
 
-	uint32_t raster[336][492];		  //336 for 40 col, 312 for 80 col
+	uint32_t raster[336][492];		  		//336 for 40 col, 312 for 80 col
 	uint32_t *m_palette;
 
 	unsigned m_variant;
 	unsigned trace;
-	unsigned busy_ticks;	// In us
+	unsigned busy_ticks;	// In ns
 	unsigned long flash;
 };
 
