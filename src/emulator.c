@@ -34,14 +34,18 @@ void emulator_destroy()
 
 byte cpu_memory_read(size_t param, ushort address)
 {
+    //TODO: Gestion des extensions mémoires
+	if(address >= 0x8000)
+        return 0;
+
     return memory[address];
 }
 
 void cpu_memory_write(size_t param, ushort address, byte data)
 {
-    //TODO: Gestion des extensions mémoires
-    if(address < 0x4000)
-        return;
+	//TODO: Gestion des extensions mémoires
+	if(address >= 0x8000)
+		return;
 
     memory[address] = data;
 }
@@ -61,6 +65,7 @@ byte cpu_io_read(size_t param, ushort address)
         case 0x83: case 0x84: case 0x85:
         case 0x86: case 0x87: case 0x88:
             return ioport[address];
+
         default:
             printf("[IO port] Tried to read on unknown port %4x\n", address);
             break;
