@@ -14,6 +14,25 @@ GtkWidget *screen_area;
 GThread *emulator_thread;
 cairo_surface_t *screen;
 
+int adapt_keyval(int keyval)
+{
+	if(keyval == GDK_KEY_Return)
+		return '\n';
+	return keyval;
+}
+
+gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+	emulator_key_press(adapt_keyval(event->keyval));
+	return FALSE;
+}
+
+gboolean on_key_release(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+	emulator_key_release(adapt_keyval(event->keyval));
+	return FALSE;
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *main_window;
@@ -31,10 +50,13 @@ int main(int argc, char *argv[])
 	debug_address	= GTK_WIDGET(gtk_builder_get_object(builder, "DebuggerAddressDialog"));
 	screen_area		= GTK_WIDGET(gtk_builder_get_object(builder, "OutputArea"));
 
-    screen = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 492, 312);
+    screen = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 336, 320);
 
     gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
+
+	g_signal_connect(G_OBJECT(main_window), "key_press_event", G_CALLBACK(on_key_press), NULL);
+	g_signal_connect(G_OBJECT(main_window), "key_release_event", G_CALLBACK(on_key_release), NULL);
 
 	emulator_init(argc, argv);
 	emulator_thread = g_thread_new("Emulator", emulator_run, NULL);
@@ -57,15 +79,13 @@ void on_about_click()
 
 void on_screen_draw(GtkWidget *widget, cairo_t *cr, gpointer user_data)
 {
-    extern cairo_surface_t* screen;
-
     cairo_set_source_surface(cr, screen, 0, 0);
-    cairo_paint(cr); // Crash
+    cairo_paint(cr); /* Crash */
 }
 
 void on_main_window_exit()
 {
-	//emulator_destroy();
+	/* emulator_destroy(); */
     gtk_main_quit();
 }
 

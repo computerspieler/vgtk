@@ -8,6 +8,7 @@
 #include "ef9345rom.h"
 #include "ef9345.h"
 #include "emulator.h"
+#include "keycodes.h"
 
 Z80Context z80_ctx;
 byte memory[0x10000];
@@ -16,14 +17,14 @@ byte ioport[0x100];
 struct ef9345 *ef_ctx;
 
 uint32_t palette[8] = {
-    0x000000, // Black
-    0xFF0000, // Red
-    0x00FF00, // Green
-    0xFFFF00, // Yellow
-    0x0000FF, // Blue
-    0xFF00FF, // Violet
-    0x00FFFF, // Cyan
-    0xFFFFFF  // White
+    0x000000, /* Black */
+    0xFF0000, /* Red */
+    0x00FF00, /* Green */
+    0xFFFF00, /* Yellow */
+    0x0000FF, /* Blue */
+    0xFF00FF, /* Violet */
+    0x00FFFF, /* Cyan */
+    0xFFFFFF  /* White */
 };
 
 void emulator_destroy()
@@ -34,7 +35,7 @@ void emulator_destroy()
 
 byte cpu_memory_read(size_t param, ushort address)
 {
-    //TODO: Gestion des extensions mémoires
+    /* TODO: Gestion des extensions mémoires */
 	if(address >= 0x8000)
         return 0;
 
@@ -43,8 +44,11 @@ byte cpu_memory_read(size_t param, ushort address)
 
 void cpu_memory_write(size_t param, ushort address, byte data)
 {
-	//TODO: Gestion des extensions mémoires
+	/* TODO: Gestion des extensions mémoires */
 	if(address >= 0x8000)
+		return;
+
+	if(address < 0x4000)
 		return;
 
     memory[address] = data;
@@ -58,16 +62,17 @@ byte cpu_io_read(size_t param, ushort address)
         case 0xcf:
             return (byte) ef9345_read(ef_ctx, ioport[0x8f]);
         
-        case 0x8f: //TODO: Vérifier si c'est conforme
-            return ioport[0x8f];
+        case 0x8f: /* TODO: Vérifier si c'est conforme */
+            return ioport[address];
 
+		/* Keyboard's IO */
         case 0x80: case 0x81: case 0x82:
         case 0x83: case 0x84: case 0x85:
         case 0x86: case 0x87: case 0x88:
             return ioport[address];
 
         default:
-            printf("[IO port] Tried to read on unknown port %4x\n", address);
+            /* printf("[IO port] Tried to read on unknown port %4x\n", address); */
             break;
     }
     return 0;
@@ -83,7 +88,7 @@ void cpu_io_write(size_t param, ushort address, byte data)
             return;
         case 0x8f: return;
 	    default:
-            printf("[IO port] Tried to write 0x%2x on unknown port %4x\n", data, address);
+            /* printf("[IO port] Tried to write 0x%02x on unknown port %04x\n", data, address); */
             return; 
     }
 }
@@ -120,17 +125,17 @@ void emulator_init(int argc, char* argv[])
     }
 
     if(patch_rom) {
-        memory[0x3aa9] = 0xed; memory[0x3aaa] = 0xfe;   //ecriture cassette
-        memory[0x3af3] = 0xed; memory[0x3af4] = 0xfe;   //test vitesse k7
-        memory[0x3b48] = 0xed; memory[0x3b49] = 0xfe;   //lecture octet cassette
-        memory[0x1e00] = 0xaf; memory[0x1e01] = 0x1f;   //fin cassette Basicode
-        memory[0x3a81] = 0xc9;                          //signaux de synchro
+        memory[0x3aa9] = 0xed; memory[0x3aaa] = 0xfe;   /* ecriture cassette */
+        memory[0x3af3] = 0xed; memory[0x3af4] = 0xfe;   /* test vitesse k7 */
+        memory[0x3b48] = 0xed; memory[0x3b49] = 0xfe;   /* lecture octet cassette */
+        memory[0x1e00] = 0xaf; memory[0x1e01] = 0x1f;   /* fin cassette Basicode */
+        memory[0x3a81] = 0xc9;                          /* signaux de synchro */
     }
     
-    //initialisation ports
-    for(i = 0x07; i < 0x09; i++)    //joysticks au repos
+    /* initialisation ports */
+    for(i = 0x07; i < 0x09; i++)    /* joysticks au repos */
         ioport[i] = 0xff;
-    for(i = 0x80; i < 0x88; i++)    //touches relachees
+    for(i = 0x80; i < 0x88; i++)    /* touches relachees */
         ioport[i] = 0xff;
 
     Z80RESET(&z80_ctx);
@@ -139,7 +144,7 @@ void emulator_init(int argc, char* argv[])
     ef9345_reset(ef_ctx);
 }
 
-//TODO: Move it somewhere else
+/* TODO: Move it somewhere else */
 unsigned long get_seconds()
 {
     struct timeval tv;
@@ -150,7 +155,9 @@ unsigned long get_seconds()
 
 gpointer emulator_run(gpointer data)
 {
+	int i;
 #ifdef DEBUG
+	int prev_pc;
     char buffer[1024];
 #endif
 	(void) data;
@@ -162,14 +169,16 @@ gpointer emulator_run(gpointer data)
     while(true) {
         update_time = get_seconds();
 
-        int prev_pc;
-        for(int i = 0; i < 80000; i ++) {
+        for(i = 0; i < 80000; i ++) {
+#ifdef DEBUG
             prev_pc = z80_ctx.PC;
+#endif
             Z80ExecuteTStates(&z80_ctx, 1);
+#ifdef DEBUG
             if(prev_pc == z80_ctx.PC)
                 continue;
-#ifdef DEBUG
-            Z80Debug(&z80_ctx, NULL, buffer);
+            
+			Z80Debug(&z80_ctx, NULL, buffer);
             printf("PC=%4x;AF=%4x;HL=%4x;BC=%4x;DE=%4x;Inst:%s\n",
                 z80_ctx.PC,
                 z80_ctx.R1.wr.AF,
@@ -184,8 +193,8 @@ gpointer emulator_run(gpointer data)
         Z80INT(&z80_ctx, 0x38);
         ef9345_cycles(ef_ctx, (update_time - last_update_time) * 1000L);
 
-        // TODO: Un-hardcode this value
-        // 16667 us = 1/(60 fps)
+        /* TODO: Un-hardcode this value */
+        /* 16667 us = 1/(60 fps) */
         if(last_refresh_time - update_time >= 16667) {
             emulator_refresh_screen(ef_ctx);
             last_refresh_time = update_time;
@@ -197,4 +206,32 @@ gpointer emulator_run(gpointer data)
     return NULL;
 }
 
+void emulator_key_press(int key)
+{
+	int keycode;
 
+	printf("Press %d\n", key);
+	/* We don't support special keys for the moment */
+	if(key >= 256)
+		return;
+
+	keycode = keycodes[key];
+	if(keycode == 0)
+		return;
+	ioport[0x80 + (keycode >> 3)] &= ~(1 << (keycode & 7));
+}
+
+void emulator_key_release(int key)
+{
+	int keycode;
+
+	printf("Release %d\n", key);
+	/* We don't support special keys for the moment */
+	if(key >= 256)
+		return;
+
+	keycode = keycodes[key];
+	if(keycode == 0)
+		return;
+	ioport[0x80 + (keycode >> 3)] |= 1 << (keycode & 7);
+}
