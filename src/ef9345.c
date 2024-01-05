@@ -1,5 +1,7 @@
-// license:GPL-2.0+
-// copyright-holders:Daniel Coulom,Sandro Ronco
+/* 
+ * license:GPL-2.0+
+ * copyright-holders:Daniel Coulom,Sandro Ronco
+ */
 /*********************************************************************
 
     ef9345.c
@@ -47,11 +49,11 @@
 
 static void set_video_mode(struct ef9345 *ef);
 
-//**************************************************************************
-//  HELPERS
-//**************************************************************************
+/***************************************************************************
+   HELPERS
+***************************************************************************/
 
-// calculate the internal RAM offset
+/* calculate the internal RAM offset*/
 static uint16_t indexram(struct ef9345 *ef, uint8_t r)
 {
 	uint8_t x = ef->reg[r];
@@ -61,7 +63,7 @@ static uint16_t indexram(struct ef9345 *ef, uint8_t r)
 	return ((x&0x3f) | ((x & 0x40) << 6) | ((x & 0x80) << 4) | ((y & 0x1f) << 6) | ((y & 0x20) << 8));
 }
 
-// calculate the internal ROM offset
+/* calculate the internal ROM offset*/
 static uint16_t indexrom(struct ef9345 *ef, uint8_t r)
 {
 	uint8_t x = ef->reg[r];
@@ -71,7 +73,7 @@ static uint16_t indexrom(struct ef9345 *ef, uint8_t r)
 	return((x&0x3f)|((x&0x40)<<6)|((x&0x80)<<4)|((y&0x1f)<<6));
 }
 
-// increment x
+/* increment x*/
 static void inc_x(struct ef9345 *ef, uint8_t r)
 {
 	uint8_t i = (ef->reg[r] & 0x3f) + 1;
@@ -83,7 +85,7 @@ static void inc_x(struct ef9345 *ef, uint8_t r)
 	ef->reg[r] = (ef->reg[r] & 0xc0) | i;
 }
 
-// increment y
+/* increment y*/
 static void inc_y(struct ef9345 *ef, uint8_t r)
 {
 	uint8_t i = (ef->reg[r] & 0x1f) + 1;
@@ -104,15 +106,15 @@ uint8_t vram_readb(struct ef9345 *ef, uint16_t addr)
 }
 
 
-//**************************************************************************
-//  live device
-//**************************************************************************
+/***************************************************************************
+  live device
+****************************************************************************/
 
-//-------------------------------------------------
-//  device_start - device-specific startup
-//-------------------------------------------------
+/*-----------------------------------------------*
+   device_start - device-specific startup
+-------------------------------------------------*/
 
-// initialize the ef9345 accented chars
+/* initialize the ef9345 accented chars */
 static void init_accented_chars(struct ef9345 *ef)
 {
 	uint16_t i, j;
@@ -123,42 +125,42 @@ static void init_accented_chars(struct ef9345 *ef)
 	for(j = 0; j < 0x200; j += 0x40)
 		for(i = 0; i < 4; i++)
 		{
-			ef->m_acc_char[0x0200 + j + i +  4] |= 0x1c; //tilde
-			ef->m_acc_char[0x0400 + j + i +  4] |= 0x10; //acute
-			ef->m_acc_char[0x0400 + j + i +  8] |= 0x08; //acute
-			ef->m_acc_char[0x0600 + j + i +  4] |= 0x04; //grave
-			ef->m_acc_char[0x0600 + j + i +  8] |= 0x08; //grave
+			ef->m_acc_char[0x0200 + j + i +  4] |= 0x1c; /* tilde */
+			ef->m_acc_char[0x0400 + j + i +  4] |= 0x10; /* acute */
+			ef->m_acc_char[0x0400 + j + i +  8] |= 0x08; /* acute */
+			ef->m_acc_char[0x0600 + j + i +  4] |= 0x04; /* grave */
+			ef->m_acc_char[0x0600 + j + i +  8] |= 0x08; /* grave */
 
-			ef->m_acc_char[0x0a00 + j + i +  4] |= 0x1c; //tilde
-			ef->m_acc_char[0x0c00 + j + i +  4] |= 0x10; //acute
-			ef->m_acc_char[0x0c00 + j + i +  8] |= 0x08; //acute
-			ef->m_acc_char[0x0e00 + j + i +  4] |= 0x04; //grave
-			ef->m_acc_char[0x0e00 + j + i +  8] |= 0x08; //grave
+			ef->m_acc_char[0x0a00 + j + i +  4] |= 0x1c; /* tilde */
+			ef->m_acc_char[0x0c00 + j + i +  4] |= 0x10; /* acute */
+			ef->m_acc_char[0x0c00 + j + i +  8] |= 0x08; /* acute */
+			ef->m_acc_char[0x0e00 + j + i +  4] |= 0x04; /* grave */
+			ef->m_acc_char[0x0e00 + j + i +  8] |= 0x08; /* grave */
 
-			ef->m_acc_char[0x1200 + j + i +  4] |= 0x08; //point
-			ef->m_acc_char[0x1400 + j + i +  4] |= 0x14; //trema
-			ef->m_acc_char[0x1600 + j + i + 32] |= 0x08; //cedilla
-			ef->m_acc_char[0x1600 + j + i + 36] |= 0x04; //cedilla
+			ef->m_acc_char[0x1200 + j + i +  4] |= 0x08; /* point */
+			ef->m_acc_char[0x1400 + j + i +  4] |= 0x14; /* trema */
+			ef->m_acc_char[0x1600 + j + i + 32] |= 0x08; /* cedilla */
+			ef->m_acc_char[0x1600 + j + i + 36] |= 0x04; /* cedilla */
 
-			ef->m_acc_char[0x1a00 + j + i +  4] |= 0x08; //point
-			ef->m_acc_char[0x1c00 + j + i +  4] |= 0x14; //trema
-			ef->m_acc_char[0x1e00 + j + i + 32] |= 0x08; //cedilla
-			ef->m_acc_char[0x1e00 + j + i + 36] |= 0x04; //cedilla
+			ef->m_acc_char[0x1a00 + j + i +  4] |= 0x08; /* point */
+			ef->m_acc_char[0x1c00 + j + i +  4] |= 0x14; /* trema */
+			ef->m_acc_char[0x1e00 + j + i + 32] |= 0x08; /* cedilla */
+			ef->m_acc_char[0x1e00 + j + i + 36] |= 0x04; /* cedilla */
 		}
 }
 
 void ef9345_init(struct ef9345 *ef)
 {
-//	m_busy_timer = timer_alloc(FUNC(ef9345_device::clear_busy_flag), this);
-//	m_blink_timer = timer_alloc(FUNC(ef9345_device::blink_tick), this);
-//	m_blink_timer->adjust(attotime::from_msec(500), 0, attotime::from_msec(500));
+/* 	m_busy_timer = timer_alloc(FUNC(ef9345_device::clear_busy_flag), this); */
+/* 	m_blink_timer = timer_alloc(FUNC(ef9345_device::blink_tick), this); */
+/* 	m_blink_timer->adjust(attotime::from_msec(500), 0, attotime::from_msec(500)); */
 
 	init_accented_chars(ef);
 }
 
-//-------------------------------------------------
-//  device_reset - device-specific reset
-//-------------------------------------------------
+/*-------------------------------------------------
+    device_reset - device-specific reset
+-------------------------------------------------*/
 void ef9345_reset(struct ef9345 *ef)
 {
 	ef->m_tgs = ef->m_mat = ef->m_pat =ef->m_dor = ef->m_ror = 0;
@@ -177,75 +179,77 @@ void ef9345_reset(struct ef9345 *ef)
 	memset(ef->m_border, 0, sizeof(ef->m_border));
 	memset(ef->m_border, 0, sizeof(ef->m_ram_base));
 
-//	m_screen_out.fill(ef, 0);
+/*	m_screen_out.fill(ef, 0);*/
 
 	set_video_mode(ef);
 }
 
-// set busy flag and timer to clear it
+/* set busy flag and timer to clear it */
 static void set_busy_flag(struct ef9345 *ef, int period)
 {
-//FIXME ef->m_bf = 1;
+/*FIXME ef->m_bf = 1; */
 	ef->busy_ticks = period;	/* in ns */
 }
 
-// draw a char in 40 char line mode
+/* draw a char in 40 char line mode */
 static void draw_char_40(struct ef9345 *ef, uint8_t *charset, uint16_t x, uint16_t y)
 {
 	const uint32_t *palette = ef->m_palette;
 	const int scan_xsize = 8;
 	const int scan_ysize = 10;
+	int i, j;
 
-	for(int i = 0; i < scan_ysize; i++)
-		for(int j = 0; j < scan_xsize; j++)
+	for(i = 0; i < scan_ysize; i++)
+		for(j = 0; j < scan_xsize; j++)
 			ef->raster[(y * scan_ysize + i)][(x * scan_xsize + j)] =
 				palette[charset[scan_xsize * i + j] & 0x07];
 }
 
-// draw a char in 80 char line mode
+/* draw a char in 80 char line mode */
 static void draw_char_80(struct ef9345 *ef, uint8_t *charset, uint16_t x, uint16_t y)
 {
 	const uint32_t *palette = ef->m_palette;
 	const int scan_xsize = 6;
 	const int scan_ysize = 10;
+	int i, j;
 
-	for(int i = 0; i < scan_ysize; i++)
-		for(int j = 0; j < scan_xsize; j++)
+	for(i = 0; i < scan_ysize; i++)
+		for(j = 0; j < scan_xsize; j++)
 			ef->raster[(y * scan_ysize + i)][(x * scan_xsize + j)] =
 				palette[charset[scan_xsize * i + j] & 0x07];
 }
 
 
-// set the ef9345 mode
+/* set the ef9345 mode */
 static void set_video_mode(struct ef9345 *ef)
 {
 	if (ef->m_variant == TS9347)
 	{
-		// Only TGS 7 & 6 used for the char mode with the TS9347
+		/* Only TGS 7 & 6 used for the char mode with the TS9347 */
 		ef->m_char_mode = ((ef->m_tgs & 0xc0) >> 6);
 	} else {
-		// PAT 7, TGS 7 & 6
+		/* PAT 7, TGS 7 & 6 */
 		ef->m_char_mode = ((ef->m_pat & 0x80) >> 5) | ((ef->m_tgs & 0xc0) >> 6);
 	}
 
-//	uint16_t new_width = (ef->m_char_mode == MODE12x80 || ef->m_char_mode == MODE8x80) ? 492 : 336;
+/* uint16_t new_width = (ef->m_char_mode == MODE12x80 || ef->m_char_mode == MODE8x80) ? 492 : 336; */
 	/* TODO render size switch */
 
-	//border color
+	/* border color */
 	memset(ef->m_border, ef->m_mat & MAT_MARGIN_COLOR_MASK, sizeof(ef->m_border));
 
-	//set the base for the m_videoram charset
+	/* set the base for the m_videoram charset */
 	ef->m_ram_base[0] = ((ef->m_dor & 0x07) << 11);
 	ef->m_ram_base[1] = ef->m_ram_base[0];
 	ef->m_ram_base[2] = ((ef->m_dor & 0x30) << 8);
 	ef->m_ram_base[3] = ef->m_ram_base[2] + 0x0800;
 
-	//address of the current memory block
+	/* address of the current memory block */
 	ef->m_block = 0x0800 * ((((ef->m_ror & 0xf0) >> 4) | ((ef->m_ror & 0x40) >> 5) | ((ef->m_ror & 0x20) >> 3)) & 0x0c);
 }
 
 
-// read a char in charset or in m_videoram
+/* read a char in charset or in m_videoram */
 static uint8_t read_char(struct ef9345 *ef, uint8_t index, uint16_t addr)
 {
 	if (index < 0x04)
@@ -258,7 +262,7 @@ static uint8_t read_char(struct ef9345 *ef, uint8_t index, uint16_t addr)
 		return vram_readb(ef, addr);
 }
 
-// calculate the dial position of the char
+/* calculate the dial position of the char */
 static void update_dial(struct ef9345 *ef, uint8_t x, uint8_t double_width, uint8_t double_height)
 {
 	uint8_t previous_dial;
@@ -288,7 +292,7 @@ static void update_dial(struct ef9345 *ef, uint8_t x, uint8_t double_width, uint
 	}
 }
 
-// zoom the char
+/* zoom the char */
 static void zoom(struct ef9345 *ef, uint8_t *pix, uint16_t flag)
 {
 	uint8_t i, j;
@@ -317,7 +321,7 @@ static void zoom(struct ef9345 *ef, uint8_t *pix, uint16_t flag)
 }
 
 
-// calculate the address of the char x,y
+/* calculate the address of the char x,y */
 static uint16_t indexblock(struct ef9345 *ef, uint16_t x, uint16_t y)
 {
 	uint16_t i, j;
@@ -332,43 +336,44 @@ static uint16_t indexblock(struct ef9345 *ef, uint16_t x, uint16_t y)
 	return 0x40 * j + i;
 }
 
-// draw bichrome character (40 columns)
+/* draw bichrome character (40 columns) */
 static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address,
 	uint8_t dial, uint16_t iblock, uint16_t x, uint16_t y,
 	uint8_t c0, uint8_t c1, uint8_t insert, uint8_t flash,
 	uint8_t conceal, uint8_t negative, uint8_t underline)
 {
 	uint16_t i;
+	uint8_t b;
 	uint8_t pix[80];
 
 	if (ef->m_variant == TS9347)
 		c0 = 0;
 	
 	if (flash && ef->m_pat & 0x40 && ef->m_blink)
-		c1 = c0;                    //flash
+		c1 = c0;                    /* flash */
 	if (conceal && (ef->m_pat & 0x08))
-		c1 = c0;                    //conceal
-	if (negative) {                 //negative
+		c1 = c0;                    /* conceal */
+	if (negative) {                 /* negative */
 		i = c1;
 		c1 = c0;
 		c0 = i;
 	}
 
 	if ((ef->m_pat & 0x30) == 0x30)
-		insert = 0;                 //active area mark
+		insert = 0;                 /* active area mark */
 	if (insert == 0)
-		c1 += 8;                    //foreground color
+		c1 += 8;                    /* foreground color */
 	if ((ef->m_pat & 0x30) == 0x00)
-		insert = 1;                 //insert mode
+		insert = 1;                 /* insert mode */
 	if (insert == 0)
-		c0 += 8;                    //background color
+		c0 += 8;                    /* background color */
 
-	//draw the cursor
+	/* draw the cursor */
 	i = (ef->reg[6] & 0x1f);
 	if (i < 8)
 		i &= 1;
 
-	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f)) {  //cursor position
+	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f)) {  /* cursor position */
 		if(ef->m_mat & MAT_SHOW_CURSOR) {
 			if(ef->m_blink || !(ef->m_mat & MAT_CURSOR_FLASH)) {
 				c0 = (23 - c0) & 15;
@@ -380,15 +385,15 @@ static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address,
 		}
 	}
 
-	// generate the pixel table
+	/* generate the pixel table */
 	for(i = 0; i < 40; i+=4) {
 		uint8_t ch = read_char(ef, type, address + i);
 
-		for (uint8_t b=0; b<8; b++)
+		for(b = 0; b < 8; b ++)
 			pix[i*2 + b] = (ch & (1<<b)) ? c1 : c0;
 	}
 
-	//draw the underline
+	/* draw the underline */
 	if (underline)
 		memset(&pix[72], c1, 8);
 
@@ -400,15 +405,17 @@ static void bichrome40(struct ef9345 *ef, uint8_t type, uint16_t address,
 	draw_char_40(ef, pix, x + 1 , y + 1);
 }
 
-// draw quadrichrome character (40 columns)
+/* draw quadrichrome character (40 columns) */
 static void quadrichrome40(struct ef9345 *ef, uint8_t c, uint8_t b, uint8_t a, uint16_t x, uint16_t y)
 {
-	//C0-6= character code
-	//B0= insert             not yet implemented !!!
-	//B1= low resolution
-	//B2= subset index (low resolution only)
-	//B3-5 = set number
-	//A0-6 = 4 color palette
+	/*
+	 * C0-6= character code
+	 * B0 = insert             not yet implemented !!!
+	 * B1 = low resolution
+	 * B2 = subset index (low resolution only)
+	 * B3-5 = set number
+	 * A0-6 = 4 color palette
+	 */
 
 	uint8_t i, j, n, col[8], pix[80];
 	uint8_t lowresolution = (b & 0x02) >> 1, ramx, ramy, ramblock;
@@ -416,14 +423,14 @@ static void quadrichrome40(struct ef9345 *ef, uint8_t c, uint8_t b, uint8_t a, u
 
 	if (ef->m_variant == TS9347)
 	{
-		// No quadrichrome support into the TS9347
+		/* No quadrichrome support into the TS9347 */
 		return;
 	}
 
-	//quadrichrome don't support double size
+	/* quadrichrome don't support double size */
 	ef->m_last_dial[x] = DIAL_NONE;
 
-	//initialize the color table
+	/* initialize the color table */
 	for(j = 1, n = 0, i = 0; i < 8; i++)
 	{
 		col[i] = 7;
@@ -434,19 +441,19 @@ static void quadrichrome40(struct ef9345 *ef, uint8_t c, uint8_t b, uint8_t a, u
 		j <<= 1;
 	}
 
-	//find block number in ram
+	/* find block number in ram */
 	ramblock = 0;
-	if (b & 0x20)   ramblock |= 4;      //B5
-	if (b & 0x08)   ramblock |= 2;      //B3
-	if (b & 0x10)   ramblock |= 1;      //B4
+	if (b & 0x20)   ramblock |= 4;      /* B5 */
+	if (b & 0x08)   ramblock |= 2;      /* B3 */
+	if (b & 0x10)   ramblock |= 1;      /* B4 */
 
-	//find character address in ram
+	/* find character address in ram */
 	ramx = c & 0x03;
 	ramy =(c & 0x7f) >> 2;
 	ramindex = 0x0800 * ramblock + 0x40 * ramy + ramx;
 	if (lowresolution) ramindex += 5 * (b & 0x04);
 
-	//fill pixel table
+	/* fill pixel table */
 	for(i = 0, j = 0; i < 10; i++)
 	{
 		uint8_t ch = read_char(ef, 0x0c, ramindex + 4 * (i >> lowresolution));
@@ -459,27 +466,31 @@ static void quadrichrome40(struct ef9345 *ef, uint8_t c, uint8_t b, uint8_t a, u
 	draw_char_40(ef, pix, x + 1, y + 1);
 }
 
-// draw bichrome character (80 columns)
+/* draw bichrome character (80 columns) */
 static void bichrome80(struct ef9345 *ef, uint8_t c, uint8_t a, uint16_t x, uint16_t y, uint8_t cursor)
 {
 	uint8_t c0, c1, pix[60];
+	uint8_t b;
 	uint16_t i, j, d;
 
-	c1 = (a & 1) ? (ef->m_dor >> 4) & 7 : ef->m_dor & 7;	//foreground color = DOR
-	c0 =  ef->m_mat & MAT_MARGIN_COLOR_MASK;			//background color = MAT
+	c1 = (a & 1) ? (ef->m_dor >> 4) & 7 : ef->m_dor & 7;	/* foreground color = DOR */
+	c0 =  ef->m_mat & MAT_MARGIN_COLOR_MASK;			/* background color = MAT */
 
 	switch(c & 0x80)
 	{
-	case 0: //alphanumeric G0 set
-		//A0: D = color set
-		//A1: U = underline
-		//A2: F = flash
-		//A3: N = negative
-		//C0-6: character code
+	case 0:
+		/*
+		 * alphanumeric G0 set
+		 * A0: D = color set
+		 * A1: U = underline
+		 * A2: F = flash
+		 * A3: N = negative
+		 * C0-6: character code
+		 */
 
 		if ((a & 4) && (ef->m_pat & 0x40) && (ef->m_blink))
-			c1 = c0;    //flash
-		if (a & 8)      //negative
+			c1 = c0;    /* flash */
+		if (a & 8)      /* negative */
 		{
 			i = c1;
 			c1 = c0;
@@ -493,24 +504,27 @@ static void bichrome80(struct ef9345 *ef, uint8_t c, uint8_t a, uint16_t x, uint
 			c0 = i;
 		}
 
-		d = ((c & 0x7f) >> 2) * 0x40 + (c & 0x03);  //char position
+		d = ((c & 0x7f) >> 2) * 0x40 + (c & 0x03);  /* char position */
 
 		for(i=0, j=0; i < 10; i++)
 		{
 			uint8_t ch = read_char(ef, 0, d + 4 * i);
-			for (uint8_t b=0; b<6; b++)
+			for (b = 0; b < 6; b ++)
 				pix[j++] = (ch & (1<<b)) ? c1 : c0;
 		}
 
-		//draw the underline
+		/* draw the underline */
 		if ((a & 2) || (cursor == 0x50) || ((cursor == 0x70) && ef->m_blink))
 			memset(&pix[54], c1, 6);
 
 		break;
-	default: //dedicated mosaic set
-		//A0: D = color set
-		//A1-3: 3 blocks de 6 pixels
-		//C0-6: 7 blocks de 6 pixels
+	default:
+		/*
+		 * dedicated mosaic set
+		 * A0: D = color set
+		 * A1-3: 3 blocks de 6 pixels
+		 * C0-6: 7 blocks de 6 pixels
+		 */
 		pix[ 0] = (c & 0x01) ? c1 : c0;
 		pix[ 3] = (c & 0x02) ? c1 : c0;
 		pix[12] = (c & 0x04) ? c1 : c0;
@@ -537,7 +551,7 @@ static void bichrome80(struct ef9345 *ef, uint8_t c, uint8_t a, uint16_t x, uint
 	draw_char_80(ef, pix, x, y);
 }
 
-// generate 16 bits 40 columns char
+/* generate 16 bits 40 columns char */
 static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
 	uint8_t a, b, c0, c1, i, f, m, n, u, type;
@@ -553,19 +567,20 @@ static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t s
 			(!(a & 0x80)) && (a & 0x10)
 		);
 
-	//type and address of the char
+	/* type and address of the char */
 	type = ((b & 0x80) >> 4) | ((a & 0x80) >> 6);
 	address = ((b & 0x7c) << 4) | (b & 0x03);
 
-	//reset attributes latch
+	/* reset attributes latch */
 	if (x == 0)
 		ef->m_latchm = ef->m_latchi = ef->m_latchu = ef->m_latchc0 = 0;
 
-	//delimiter
+	/* delimiter */
 	if ((b & 0xe0) == 0x80)
 	{
 		type = 0;
-		address = (((127) & 0x7c) << 4) | ((127) & 0x03); // Force character 127 (negative space) of first type.
+		/* Force character 127 (negative space) of first type. */
+		address = (((127) & 0x7c) << 4) | ((127) & 0x03);
 
 		ef->m_latchm = b & 1;
 		ef->m_latchi = (b & 2) >> 1;
@@ -575,19 +590,19 @@ static void makechar_16x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t s
 	if (a & 0x80)
 		ef->m_latchc0 = (a & 0x70) >> 4;
 
-	//char attributes
-	c0 = ef->m_latchc0;                         //background
-	c1 = a & 0x07;                          //foreground
-	i = ef->m_latchi;                           //insert mode
-	f  = (a & 0x08) >> 3;                   //flash
-	m = ef->m_latchm;                           //conceal
-	n  = (a & 0x80) ? 0: ((a & 0x40) >> 6); //negative
-	u = ef->m_latchu;                           //underline
+	/* char attributes */
+	c0 = ef->m_latchc0;                     /* background */
+	c1 = a & 0x07;                          /* foreground */
+	i = ef->m_latchi;                       /* insert mode */
+	f  = (a & 0x08) >> 3;                   /* flash */
+	m = ef->m_latchm;                       /* conceal */
+	n  = (a & 0x80) ? 0: ((a & 0x40) >> 6); /* negative */
+	u = ef->m_latchu;                       /* underline */
 
 	bichrome40(ef, type, address, ef->m_last_dial[x], iblock, x, y, c0, c1, i, f, m, n, u);
 }
 
-// generate 24 bits 40 columns char
+/* generate 24 bits 40 columns char */
 static void makechar_24x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
 	uint8_t a, b, c, c0, c1, i, f, m, n, u, type;
@@ -606,27 +621,27 @@ static void makechar_24x40(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t s
 	if(scanline == 0)
 		update_dial(ef, x, b & 0x08, b & 0x02);
 	
-	//type and address of the char
+	/* type and address of the char */
 	address = ((c & 0x7c) << 4) | (c & 0x03);
 	type = (b & 0xf0) >> 4;
 
-	//char attributes
-	c0 = a & 0x07;                  //background
-	c1 = (a & 0x70) >> 4;           //foreground
-	i = b & 0x01;                   //insert
-	f = (a & 0x08) >> 3;            //flash
-	m = (b & 0x04) >> 2;            //conceal
-	n = ((a & 0x80) >> 7);          //negative
-	u = (((b & 0x60) == 0) || ((b & 0xc0) == 0x40)) ? ((b & 0x10) >> 4) : 0; //underline
+	/* char attributes */
+	c0 = a & 0x07;                  /* background */
+	c1 = (a & 0x70) >> 4;           /* foreground */
+	i = b & 0x01;                   /* insert */
+	f = (a & 0x08) >> 3;            /* flash */
+	m = (b & 0x04) >> 2;            /* conceal */
+	n = ((a & 0x80) >> 7);          /* negative */
+	u = (((b & 0x60) == 0) || ((b & 0xc0) == 0x40)) ? ((b & 0x10) >> 4) : 0; /* underline */
 
 	bichrome40(ef, type, address, ef->m_last_dial[x], iblock, x, y, c0, c1, i, f, m, n, u);
 }
 
-// generate 12 bits 80 columns char
+/* generate 12 bits 80 columns char */
 static void makechar_12x80(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanline)
 {
 	uint16_t iblock = indexblock(ef, x, y);
-	//draw the cursor
+	/* draw the cursor */
 	uint8_t cursor = 0;
 	uint8_t b = ef->reg[7] & 0x80;
 
@@ -634,7 +649,7 @@ static void makechar_12x80(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t s
 	if (i < 8)
 		i &= 1;
 
-	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f))   //cursor position
+	if (iblock == 0x40 * i + (ef->reg[7] & 0x3f))   /* cursor position */
 		cursor = ef->m_mat & MAT_CURSOR_CONFIG_MASK;
 
 	bichrome80(ef,
@@ -655,11 +670,12 @@ static void makechar_12x80(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t s
 
 static void draw_border(struct ef9345 *ef, uint16_t line)
 {
+	int i;
 	if (ef->m_char_mode == MODE12x80 || ef->m_char_mode == MODE8x80)
-		for(int i = 0; i < 82; i++)
+		for(i = 0; i < 82; i++)
 			draw_char_80(ef, ef->m_border, i, line);
 	else
-		for(int i = 0; i < 42; i++)
+		for(i = 0; i < 42; i++)
 			draw_char_40(ef, ef->m_border, i, line);
 }
 
@@ -671,12 +687,12 @@ static void makechar(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanlin
 			makechar_24x40(ef, x, y, scanline);
 			break;
 		case MODEVAR40:
-			// TS9347 char mode definition is different.
+			/* TS9347 char mode definition is different. */
 			if (ef->m_variant == TS9347) {
 				makechar_16x40(ef, x, y, scanline);
 				break;
 			}
-			// fallthrough
+			/* fallthrough */
 		case MODE8x80:
 			fprintf(stderr, "Unemulated EF9345 mode: %02x\n", ef->m_char_mode);
 			break;
@@ -695,21 +711,21 @@ static void makechar(struct ef9345 *ef, uint16_t x, uint16_t y, uint16_t scanlin
 	}
 }
 
-// Execute EF9345 command
+/* Execute EF9345 command */
 void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 {
 	ef->m_state = 0;
 	if ((ef->reg[5] & 0x3f) == 39)
-		ef->m_state |= 0x10; //S4(LXa) set
+		ef->m_state |= 0x10; /* S4(LXa) set */
 	if ((ef->reg[7] & 0x3f) == 39)
-		ef->m_state |= 0x20; //S5(LXm) set
+		ef->m_state |= 0x20; /* S5(LXm) set */
 
 	uint16_t a = indexram(ef, 7);
 
 	switch(cmd)
 	{
-		case 0x00:  //KRF: R1,R2,R3->ram
-		case 0x01:  //KRF: R1,R2,R3->ram + increment
+		case 0x00:  /* KRF: R1,R2,R3->ram */
+		case 0x01:  /* KRF: R1,R2,R3->ram + increment */
 			set_busy_flag(ef, 4000);
 			vram_writeb(ef, a, ef->reg[1]);
 			vram_writeb(ef, a + 0x0800, ef->reg[2]);
@@ -717,16 +733,16 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 			if (cmd & 1)
 				inc_x(ef, 7);
 			break;
-		case 0x02:  //KRG: R1,R2->ram
-		case 0x03:  //KRG: R1,R2->ram + increment
+		case 0x02:  /* KRG: R1,R2->ram */
+		case 0x03:  /* KRG: R1,R2->ram + increment */
 			set_busy_flag(ef, 5500);
 			vram_writeb(ef, a, ef->reg[1]);
 			vram_writeb(ef, a + 0x0800, ef->reg[2]);
 			if (cmd & 1)
 				inc_x(ef, 7);
 			break;
-		case 0x08:  //KRF: ram->R1,R2,R3
-		case 0x09:  //KRF: ram->R1,R2,R3 + increment
+		case 0x08:  /* KRF: ram->R1,R2,R3 */
+		case 0x09:  /* KRF: ram->R1,R2,R3 + increment */
 			set_busy_flag(ef, 7500);
 			ef->reg[1] = vram_readb(ef, a);
 			ef->reg[2] = vram_readb(ef, a + 0x0800);
@@ -734,16 +750,16 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 			if (cmd & 1)
 				inc_x(ef, 7);
 			break;
-		case 0x0a:  //KRG: ram->R1,R2
-		case 0x0b:  //KRG: ram->R1,R2 + increment
+		case 0x0a:  /* KRG: ram->R1,R2 */
+		case 0x0b:  /* KRG: ram->R1,R2 + increment */
 			set_busy_flag(ef, 7500);
 			ef->reg[1] = vram_readb(ef, a);
 			ef->reg[2] = vram_readb(ef, a + 0x0800);
 			if (cmd & 1)
 				inc_x(ef, 7);
 			break;
-		case 0x30:  //OCT: R1->RAM, main pointer
-		case 0x31:  //OCT: R1->RAM, main pointer + inc
+		case 0x30:  /* OCT: R1->RAM, main pointer */
+		case 0x31:  /* OCT: R1->RAM, main pointer + inc */
 			set_busy_flag(ef, 4000);
 			vram_writeb(ef, indexram(ef, 7), ef->reg[1]);
 
@@ -753,16 +769,16 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 					inc_y(ef, 6);
 			}
 			break;
-		case 0x34:  //OCT: R1->RAM, aux pointer
-		case 0x35:  //OCT: R1->RAM, aux pointer + inc
+		case 0x34:  /* OCT: R1->RAM, aux pointer */
+		case 0x35:  /* OCT: R1->RAM, aux pointer + inc */
 			set_busy_flag(ef, 4000);
 			vram_writeb(ef, indexram(ef, 5), ef->reg[1]);
 
 			if (cmd&1)
 				inc_x(ef, 5);
 			break;
-		case 0x38:  //OCT: RAM->R1, main pointer
-		case 0x39:  //OCT: RAM->R1, main pointer + inc
+		case 0x38:  /* OCT: RAM->R1, main pointer */
+		case 0x39:  /* OCT: RAM->R1, main pointer + inc */
 			set_busy_flag(ef, 4500);
 			ef->reg[1] = vram_readb(ef, indexram(ef, 7));
 
@@ -774,16 +790,16 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 					inc_y(ef, 6);
 			}
 			break;
-		case 0x3c:  //OCT: RAM->R1, aux pointer
-		case 0x3d:  //OCT: RAM->R1, aux pointer + inc
+		case 0x3c:  /* OCT: RAM->R1, aux pointer */
+		case 0x3d:  /* OCT: RAM->R1, aux pointer + inc */
 			set_busy_flag(ef, 4500);
 			ef->reg[1] = vram_readb(ef, indexram(ef, 5));
 
 			if (cmd & 1)
 				inc_x(ef, 5);
 			break;
-		case 0x50:  //KRL: 80 uint8_t - 12 bits write
-		case 0x51:  //KRL: 80 uint8_t - 12 bits write + inc
+		case 0x50:  /* KRL: 80 uint8_t - 12 bits write */
+		case 0x51:  /* KRL: 80 uint8_t - 12 bits write + inc */
 			fprintf(stderr, "KRL X %d Y %d C '%c' A %02x.\n", 
 				ef->reg[7], ef->reg[6], ef->reg[1], ef->reg[3]);
 			set_busy_flag(ef, 12500);
@@ -811,8 +827,8 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 				inc_x(ef, 7);
 			}
 			break;
-		case 0x58:  //KRL: 80 uint8_t - 12 bits read
-		case 0x59:  //KRL: 80 uint8_t - 12 bits read + inc
+		case 0x58:  /* KRL: 80 uint8_t - 12 bits read */
+		case 0x59:  /* KRL: 80 uint8_t - 12 bits read + inc */
 			set_busy_flag(ef, 11500);
 			ef->reg[1] = vram_readb(ef, a);
 			switch((a / 0x0800) & 1)
@@ -835,15 +851,15 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 				inc_x(ef, 7);
 			}
 			break;
-		case 0x80:  //IND: R1->ROM (impossible ?)
+		case 0x80:  /* IND: R1->ROM (impossible ?) */
 			break;
-		case 0x81:  //IND: R1->TGS
-		case 0x82:  //IND: R1->MAT
-		case 0x83:  //IND: R1->PAT
-		case 0x84:  //IND: R1->DOR
-		case 0x87:  //IND: R1->ROR
+		case 0x81:  /* IND: R1->TGS */
+		case 0x82:  /* IND: R1->MAT */
+		case 0x83:  /* IND: R1->PAT */
+		case 0x84:  /* IND: R1->DOR */
+		case 0x87:  /* IND: R1->ROR */
 			set_busy_flag(ef, 2000);
-			fprintf(stderr, "INR %d to %02X\n", cmd & 7, ef->reg[1]);
+			/* fprintf(stderr, "INR %d to %02X\n", cmd & 7, ef->reg[1]); */
 			switch(cmd&7)
 			{
 				case 1:     ef->m_tgs = ef->reg[1]; break;
@@ -853,14 +869,14 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 				case 7:     ef->m_ror = ef->reg[1]; break;
 			}
 			set_video_mode(ef);
-			ef->m_state &= 0x8f;  //reset S4(LXa), S5(LXm), S6(Al)
+			ef->m_state &= 0x8f;  /* reset S4(LXa), S5(LXm), S6(Al) */
 			break;
-		case 0x88:  //IND: ROM->R1
-		case 0x89:  //IND: TGS->R1
-		case 0x8a:  //IND: MAT->R1
-		case 0x8b:  //IND: PAT->R1
-		case 0x8c:  //IND: DOR->R1
-		case 0x8f:  //IND: ROR->R1
+		case 0x88:  /* IND: ROM->R1 */
+		case 0x89:  /* IND: TGS->R1 */
+		case 0x8a:  /* IND: MAT->R1 */
+		case 0x8b:  /* IND: PAT->R1 */
+		case 0x8c:  /* IND: DOR->R1 */
+		case 0x8f:  /* IND: ROR->R1 */
 			set_busy_flag(ef, 3500);
 			switch(cmd&7)
 			{
@@ -871,30 +887,30 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 				case 4:     ef->reg[1] = ef->m_dor; break;
 				case 7:     ef->reg[1] = ef->m_ror; break;
 			}
-			ef->m_state &= 0x8f;  //reset S4(LXa), S5(LXm), S6(Al)
+			ef->m_state &= 0x8f;  /* reset S4(LXa), S5(LXm), S6(Al) */
 			break;
-		case 0x90:  //NOP: no operation
-		case 0x91:  //NOP: no operation
-		case 0x95:  //VRM: vertical sync mask reset
-		case 0x99:  //VSM: vertical sync mask set
+		case 0x90:  /* NOP: no operation */
+		case 0x91:  /* NOP: no operation */
+		case 0x95:  /* VRM: vertical sync mask reset */
+		case 0x99:  /* VSM: vertical sync mask set */
 			break;
-		case 0xb0:  //INY: increment Y
+		case 0xb0:  /* INY: increment Y */
 			set_busy_flag(ef, 2000);
 			inc_y(ef, 6);
-			ef->m_state &= 0x8f;  //reset S4(LXa), S5(LXm), S6(Al)
+			ef->m_state &= 0x8f;  /* reset S4(LXa), S5(LXm), S6(Al) */
 			break;
-		case 0xd5:  //MVB: move buffer MP->AP stop
-		case 0xd6:  //MVB: move buffer MP->AP nostop
-		case 0xd9:  //MVB: move buffer AP->MP stop
-		case 0xda:  //MVB: move buffer AP->MP nostop
-		case 0xe5:  //MVD: move double buffer MP->AP stop
-		case 0xe6:  //MVD: move double buffer MP->AP nostop
-		case 0xe9:  //MVD: move double buffer AP->MP stop
-		case 0xea:  //MVD: move double buffer AP->MP nostop
-		case 0xf5:  //MVT: move triple buffer MP->AP stop
-		case 0xf6:  //MVT: move triple buffer MP->AP nostop
-		case 0xf9:  //MVT: move triple buffer AP->MP stop
-		case 0xfa:  //MVT: move triple buffer AP->MP nostop
+		case 0xd5:  /* MVB: move buffer MP->AP stop */
+		case 0xd6:  /* MVB: move buffer MP->AP nostop */
+		case 0xd9:  /* MVB: move buffer AP->MP stop */
+		case 0xda:  /* MVB: move buffer AP->MP nostop */
+		case 0xe5:  /* MVD: move double buffer MP->AP stop */
+		case 0xe6:  /* MVD: move double buffer MP->AP nostop */
+		case 0xe9:  /* MVD: move double buffer AP->MP stop */
+		case 0xea:  /* MVD: move double buffer AP->MP nostop */
+		case 0xf5:  /* MVT: move triple buffer MP->AP stop */
+		case 0xf6:  /* MVT: move triple buffer MP->AP nostop */
+		case 0xf9:  /* MVT: move triple buffer AP->MP stop */
+		case 0xfa:  /* MVT: move triple buffer AP->MP nostop */
 		{
 			uint16_t i, a1, a2;
 			uint8_t n = (cmd>>4) - 0x0c;
@@ -925,16 +941,16 @@ void ef9345_exec(struct ef9345 *ef, uint8_t cmd)
 
 				busy += 4000 * n;
 			}
-			ef->m_state &= 0x8f;  //reset S4(LXa), S5(LXm), S6(Al)
+			ef->m_state &= 0x8f;  /* reset S4(LXa), S5(LXm), S6(Al) */
 			set_busy_flag(ef, busy);
 		}
 		break;
-		case 0x05:  //CLF: Clear page 24 bits
-		case 0x07:  //CLG: Clear page 16 bits
-		case 0x40:  //KRC: R1 -> ram
-		case 0x41:  //KRC: R1 -> ram + inc
-		case 0x48:  //KRC: 80 characters - 8 bits
-		case 0x49:  //KRC: 80 characters - 8 bits
+		case 0x05:  /* CLF: Clear page 24 bits */
+		case 0x07:  /* CLG: Clear page 16 bits */
+		case 0x40:  /* KRC: R1 -> ram */
+		case 0x41:  /* KRC: R1 -> ram + inc */
+		case 0x48:  /* KRC: 80 characters - 8 bits */
+		case 0x49:  /* KRC: 80 characters - 8 bits */
 		default:
 			fprintf(stderr, "Unemulated EF9345 cmd: %02x\n", cmd);
 	}
@@ -993,7 +1009,7 @@ void ef9345_update_scanline(struct ef9345 *ef, uint16_t scanline)
 		}
 		else
 		{
-			if (ef->m_pat & 4) // Lower bulk enable
+			if (ef->m_pat & 4) /* Lower bulk enable */
 				for(i = 0; i < 40; i++)
 					makechar(ef, i, (scanline / 10), scanline % 10);
 			else

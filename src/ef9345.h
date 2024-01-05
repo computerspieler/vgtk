@@ -1,5 +1,7 @@
-// license:GPL-2.0+
-// copyright-holders:Daniel Coulom,Sandro Ronco
+/* 
+ * license:GPL-2.0+
+ * copyright-holders:Daniel Coulom,Sandro Ronco
+ */
 /*********************************************************************
 
     ef9345.h
@@ -12,9 +14,9 @@
 #define _EF9345_H
 
 
-//**************************************************************************
-//  TYPE DEFINITIONS
-//**************************************************************************
+/**************************************************************************
+   TYPE DEFINITIONS
+**************************************************************************/
 
 #include <stdint.h>
 
@@ -24,29 +26,47 @@
 struct ef9345 {
 	uint8_t *m_videoram;
 	uint16_t vram_mask;
-	uint8_t *m_charset;			  //font ROM
-	uint8_t m_bf;                             //busy flag
-	uint8_t m_char_mode;                      //40 or 80 chars for line
-	uint8_t m_acc_char[0x2000];               //accented chars
-	uint8_t reg[8];		                   //registers R0-R7
-	uint8_t m_state;                          //status register
-	uint8_t m_tgs,m_mat,m_pat,m_dor,m_ror;    //indirect registers
-	uint8_t m_border[80];                     //border color
-	uint16_t m_block;                         //current memory block
-	uint16_t m_ram_base[4];                   //index of ram charset
-	uint8_t m_blink;                          //cursor status
-	uint8_t m_last_dial[40];                  //last chars dial (for determinate the zoom position)
-	uint8_t m_latchc0;                        //background color latch
-	uint8_t m_latchm;                         //hided attribute latch
-	uint8_t m_latchi;                         //insert attribute latch
-	uint8_t m_latchu;                         //underline attribute latch
+	/* Font ROM */
+	uint8_t *m_charset;
+	/* Busy flag */
+	uint8_t m_bf;
+	/* 40 or 80 chars for line */
+	uint8_t m_char_mode;
+	/* Accented characters */
+	uint8_t m_acc_char[0x2000];
+	/* Registers R0-R7 */
+	uint8_t reg[8];
+	/* Status register */
+	uint8_t m_state;
+	/* Indirect registers */
+	uint8_t m_tgs,m_mat,m_pat,m_dor,m_ror;
+	/* Border color */
+	uint8_t m_border[80];
+	/* Current memory block */
+	uint16_t m_block;
+	/* Index of ram charset */
+	uint16_t m_ram_base[4];
+	/* Cursor status */
+	uint8_t m_blink;
+	/* Last chars dial (for determinate the zoom position) */
+	uint8_t m_last_dial[40];
+	/* Background color latch */
+	uint8_t m_latchc0;
+	/* Hided attribute latch */
+	uint8_t m_latchm;
+	/* Insert attribute latch */
+	uint8_t m_latchi;
+	/* Underline attribute latch */
+	uint8_t m_latchu;
 
-	uint32_t raster[336][492];		  		//336 for 40 col, 312 for 80 col
+	/* 336 for 40 col, 312 for 80 col */
+	uint32_t raster[336][492];
 	uint32_t *m_palette;
 
 	unsigned m_variant;
 	unsigned trace;
-	unsigned busy_ticks;	// In ns
+	/* In ns*/
+	unsigned busy_ticks;
 	unsigned long flash;
 };
 
@@ -63,5 +83,5 @@ void ef9345_rasterize(struct ef9345 *ef);
 
 void ef9345_cycles(struct ef9345 *ef, unsigned long nsec);
 
-#endif	// _EF9345_H
+#endif	/* _EF9345_H */
 
